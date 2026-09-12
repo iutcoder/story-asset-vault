@@ -31,30 +31,49 @@ class AssetGallery extends StatelessWidget {
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 240, childAspectRatio: .78, crossAxisSpacing: 12, mainAxisSpacing: 12),
                 itemCount: count,
                 itemBuilder: (context, index) => controller.showingCommonAssets
-                    ? _commonCard(context, commonAssets[index])
-                    : _characterCard(context, entity!, characterAssets[index]),
+                    ? _commonCard(context, commonAssets, index)
+                    : _characterCard(context, entity!, characterAssets, index),
               )),
       ]),
     );
   }
 
-  Widget _characterCard(BuildContext context, StoryEntity entity, CharacterAsset asset) => _GalleryCard(
+  Widget _characterCard(BuildContext context, StoryEntity entity, List<CharacterAsset> assets, int index) {
+    final asset = assets[index];
+    return _GalleryCard(
     file: File(asset.storedPath),
     badge: '${entity.code}/${asset.formattedNumber}',
     label: asset.label,
     subtitle: entity.kind == EntityKind.npc ? 'NPC · ${entity.name}' : entity.name,
-    onTap: () => _open(context, File(asset.storedPath), '${entity.code}/${asset.formattedNumber} · ${asset.label}'),
+    onTap: () => _open(
+      context,
+      assets.map((item) => File(item.storedPath)).toList(),
+      assets.map((item) => '${entity.code}/${item.formattedNumber} · ${item.label}').toList(),
+      index,
+    ),
   );
+  }
 
-  Widget _commonCard(BuildContext context, CommonAsset asset) => _GalleryCard(
+  Widget _commonCard(BuildContext context, List<CommonAsset> assets, int index) {
+    final asset = assets[index];
+    return _GalleryCard(
     file: File(asset.storedPath),
     badge: asset.formattedNumber,
     label: asset.label,
     subtitle: asset.category,
-    onTap: () => _open(context, File(asset.storedPath), '${asset.category}/${asset.formattedNumber} · ${asset.label}'),
+    onTap: () => _open(
+      context,
+      assets.map((item) => File(item.storedPath)).toList(),
+      assets.map((item) => '${item.category}/${item.formattedNumber} · ${item.label}').toList(),
+      index,
+    ),
   );
+  }
 
-  void _open(BuildContext context, File file, String title) => showDialog<void>(context: context, builder: (_) => ImageMetadataDialog(file: file, title: title));
+  void _open(BuildContext context, List<File> files, List<String> titles, int initialIndex) => showDialog<void>(
+    context: context,
+    builder: (_) => ImageMetadataDialog(files: files, titles: titles, initialIndex: initialIndex),
+  );
 }
 
 class _GalleryCard extends StatelessWidget {
