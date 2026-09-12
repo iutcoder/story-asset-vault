@@ -9,6 +9,7 @@ import '../../assets/domain/story_asset.dart';
 import '../../entities/domain/story_entity.dart';
 import '../../projects/domain/story_project.dart';
 import '../application/vault_controller.dart';
+import 'asset_gallery.dart';
 
 const _imageTypes = XTypeGroup(label: 'images', extensions: ['png', 'jpg', 'jpeg', 'webp']);
 
@@ -24,7 +25,9 @@ class VaultHomePage extends StatelessWidget {
     builder: (context, _) {
       if (controller.isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
       if (controller.errorMessage != null) return Scaffold(body: Center(child: Text(controller.errorMessage!)));
-      return Scaffold(
+      return DefaultTabController(
+        length: 2,
+        child: Scaffold(
         appBar: AppBar(
           title: const Text('스토리 에셋 볼트'),
           actions: [
@@ -37,15 +40,26 @@ class VaultHomePage extends StatelessWidget {
             ),
             const SizedBox(width: 12),
           ],
+          bottom: const TabBar(tabs: [
+            Tab(icon: Icon(Icons.add_photo_alternate_outlined), text: '에셋 등록'),
+            Tab(icon: Icon(Icons.photo_library_outlined), text: '에셋 열람'),
+          ]),
         ),
-        body: controller.selectedProject == null ? _emptyProject(context) : Row(children: [
-          SizedBox(width: 280, child: _sidebar(context)),
-          const VerticalDivider(width: 1),
-          Expanded(child: controller.showingCommonAssets ? _CommonWorkspace(controller: controller) : _CharacterWorkspace(controller: controller)),
-        ]),
-      );
+        body: controller.selectedProject == null
+            ? _emptyProject(context)
+            : TabBarView(children: [
+                _modeLayout(context, editable: true, child: controller.showingCommonAssets ? _CommonWorkspace(controller: controller) : _CharacterWorkspace(controller: controller)),
+                _modeLayout(context, editable: false, child: AssetGallery(controller: controller)),
+              ]),
+      ));
     },
   );
+
+  Widget _modeLayout(BuildContext context, {required bool editable, required Widget child}) => Row(children: [
+    SizedBox(width: 280, child: _sidebar(context, editable: editable)),
+    const VerticalDivider(width: 1),
+    Expanded(child: child),
+  ]);
 
   Widget _emptyProject(BuildContext context) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
     Icon(Icons.inventory_2_outlined, size: 64, color: Theme.of(context).colorScheme.outline),
@@ -57,7 +71,7 @@ class VaultHomePage extends StatelessWidget {
     FilledButton.icon(onPressed: () => _projectDialog(context), icon: const Icon(Icons.add), label: const Text('프로젝트 만들기')),
   ]));
 
-  Widget _sidebar(BuildContext context) {
+  Widget _sidebar(BuildContext context, {required bool editable}) {
     final project = controller.selectedProject!;
     return Padding(
       padding: const EdgeInsets.all(12),
@@ -69,8 +83,8 @@ class VaultHomePage extends StatelessWidget {
             items: controller.projects.map((item) => DropdownMenuItem(value: item.id, child: Text(item.name, overflow: TextOverflow.ellipsis))).toList(),
             onChanged: (id) => controller.selectProject(controller.projects.firstWhere((item) => item.id == id)),
           ))),
-          IconButton(onPressed: () => _projectDialog(context), icon: const Icon(Icons.add), tooltip: '프로젝트 추가'),
-          PopupMenuButton<String>(
+          if (editable) IconButton(onPressed: () => _projectDialog(context), icon: const Icon(Icons.add), tooltip: '프로젝트 추가'),
+          if (editable) PopupMenuButton<String>(
             tooltip: '프로젝트 메뉴',
             onSelected: (value) => value == 'edit' ? _projectDialog(context, project: project) : _deleteProject(context, project),
             itemBuilder: (_) => const [
@@ -80,7 +94,7 @@ class VaultHomePage extends StatelessWidget {
           ),
         ]),
         const Divider(),
-        Row(children: [Expanded(child: Text('캐릭터·NPC', style: Theme.of(context).textTheme.titleMedium)), IconButton(onPressed: () => _entityDialog(context), icon: const Icon(Icons.person_add_alt_1), tooltip: '추가')]),
+        Row(children: [Expanded(child: Text('캐릭터·NPC', style: Theme.of(context).textTheme.titleMedium)), if (editable) IconButton(onPressed: () => _entityDialog(context), icon: const Icon(Icons.person_add_alt_1), tooltip: '추가')]),
         Expanded(child: ListView(children: [
           for (final entity in controller.snapshot.entities)
             ListTile(
@@ -89,14 +103,14 @@ class VaultHomePage extends StatelessWidget {
               title: Text(entity.name),
               subtitle: Text(entity.kind == EntityKind.npc ? 'NPC' : '캐릭터'),
               onTap: () => controller.selectEntity(entity),
-              trailing: PopupMenuButton<String>(
+              trailing: editable ? PopupMenuButton<String>(
                 tooltip: '캐릭터 메뉴',
                 onSelected: (value) => value == 'edit' ? _entityDialog(context, entity: entity) : _deleteEntity(context, entity),
                 itemBuilder: (_) => const [
                   PopupMenuItem(value: 'edit', child: Text('이름·코드 수정')),
                   PopupMenuItem(value: 'delete', child: Text('삭제')),
                 ],
-              ),
+              ) : null,
             ),
         ])),
         const Divider(),
