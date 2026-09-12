@@ -16,6 +16,7 @@ class VaultController extends ChangeNotifier {
   final VaultRepository _repository;
 
   bool isLoading = true;
+  bool isExporting = false;
   String? errorMessage;
   List<StoryProject> projects = const [];
   StoryProject? selectedProject;
@@ -155,7 +156,18 @@ class VaultController extends ChangeNotifier {
   }
 
   Future<File> exportProject(Directory destination) {
-    return _repository.exportProject(project: selectedProject!, destination: destination);
+    return _exportWithProgress(destination);
+  }
+
+  Future<File> _exportWithProgress(Directory destination) async {
+    isExporting = true;
+    notifyListeners();
+    try {
+      return await _repository.exportProject(project: selectedProject!, destination: destination);
+    } finally {
+      isExporting = false;
+      notifyListeners();
+    }
   }
 
   List<CharacterAsset> characterAssetsFor(StoryEntity entity) => snapshot.characterAssets.where((item) => item.entityId == entity.id).toList();
