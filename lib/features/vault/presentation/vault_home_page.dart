@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../assets/domain/story_asset.dart';
 import '../../entities/domain/story_entity.dart';
@@ -28,9 +29,11 @@ class VaultHomePage extends StatelessWidget {
           title: const Text('스토리 에셋 볼트'),
           actions: [
             TextButton.icon(
-              onPressed: controller.selectedProject == null ? null : () => _export(context),
-              icon: const Icon(Icons.archive_outlined),
-              label: const Text('프로젝트 추출'),
+              onPressed: controller.selectedProject == null || controller.isExporting ? null : () => _export(context),
+              icon: controller.isExporting
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.archive_outlined),
+              label: Text(controller.isExporting ? '추출 중…' : '프로젝트 추출'),
             ),
             const SizedBox(width: 12),
           ],
@@ -171,10 +174,27 @@ class VaultHomePage extends StatelessWidget {
   }
 
   Future<void> _export(BuildContext context) async {
-    final path = await getDirectoryPath(confirmButtonText: '이 위치에 추출');
-    if (path == null) return;
-    final file = await controller.exportProject(Directory(path));
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('ZIP을 만들었습니다: ${file.path}')));
+    try {
+      final downloads = await getDownloadsDirectory();
+      if (downloads == null) throw StateError('다운로드 폴더를 찾을 수 없습니다.');
+      final destination = Directory('${downloads.path}/StoryAssetVaultExports');
+      await destination.create(recursive: true);
+      final file = await controller.exportProject(destination);
+      if (Platform.isMacOS) {
+        await Process.run('open', ['-R', file.path]);
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('추출 완료: ${file.path}')),
+        );
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('추출 실패: $error')),
+        );
+      }
+    }
   }
 }
 
@@ -195,7 +215,6 @@ class _CharacterWorkspaceState extends State<_CharacterWorkspace> {
     return Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('${entity.code} · ${entity.name}', style: Theme.of(context).textTheme.headlineSmall), Text('${assets.length}개 에셋')])),
-        OutlinedButton.icon(onPressed: () => _pickFiles(entity), icon: const Icon(Icons.add_photo_alternate_outlined), label: const Text('여러 이미지 선택')),
       ]),
       const SizedBox(height: 16),
       DropTarget(
@@ -235,7 +254,6 @@ class _CharacterWorkspaceState extends State<_CharacterWorkspace> {
     ]),
   );
 
-  Future<void> _pickFiles(StoryEntity entity) async => _import(entity, (await openFiles(acceptedTypeGroups: const [_imageTypes])).map((item) => File(item.path)));
   Future<void> _import(StoryEntity entity, Iterable<File> files) async {
     final count = await widget.controller.importCharacterAssets(entity, files);
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$count개 이미지를 가져왔습니다.')));
