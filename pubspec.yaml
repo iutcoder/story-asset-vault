@@ -1,1 +1,26 @@
-FILE3
+name: story_asset_vault
+description: 스토리 이미지 에셋을 프로젝트별로 정리하는 로컬 데스크톱 앱.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  archive: ^3.6.1
+  desktop_drop: ^0.8.4
+  file_selector: ^1.0.3
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  sqlite3: ^2.9.4
+  uuid: ^4.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

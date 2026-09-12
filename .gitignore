@@ -1,1 +1,13 @@
-FILE0
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+*.iml
+.idea/
+.DS_Store
+macos/Flutter/ephemeral/
+windows/flutter/ephemeral/
